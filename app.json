@@ -4,6 +4,7 @@
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "smart-transport-planner",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -18,7 +19,20 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Smart Transport Planner to use your location to set a trip origin and find nearby traffic reports."
+        }
+      ]
+    ]
   }
 }
