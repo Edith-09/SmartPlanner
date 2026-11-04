@@ -1,4 +1,3 @@
-import { createMMKV } from 'react-native-mmkv';
 import { z, type ZodType } from 'zod';
 
 export interface StorageDriver {
@@ -89,10 +88,27 @@ export function createTypedStorage(
   };
 }
 
-const mmkv = createMMKV({ id: APP_NAMESPACE });
+const memoryValues = new Map<string, string>();
+let driver: StorageDriver;
 
-export const storage = createTypedStorage({
-  getString: (key) => mmkv.getString(key),
-  set: (key, value) => mmkv.set(key, value),
-  remove: (key) => mmkv.remove(key),
-});
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mmkvModule: typeof import('react-native-mmkv') = require('react-native-mmkv');
+  const mmkv = mmkvModule.createMMKV({ id: APP_NAMESPACE });
+  driver = {
+    getString: (key) => mmkv.getString(key),
+    set: (key, value) => mmkv.set(key, value),
+    remove: (key) => mmkv.remove(key),
+  };
+} catch {
+  driver = {
+    getString: (key) => memoryValues.get(key),
+    set: (key, value) => {
+      memoryValues.set(key, String(value));
+    },
+    remove: (key) => memoryValues.delete(key),
+  };
+  console.warn('MMKV unavailable (Expo Go?). Using in-memory storage; data will not persist.');
+}
+
+export const storage = createTypedStorage(driver);

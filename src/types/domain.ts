@@ -51,6 +51,9 @@ export interface Route {
   congestion: CongestionLevel;
   polyline: Coordinate[];
   trafficSegments: TrafficSegment[];
+  incidents?: Incident[];
+  alternatives?: Route[];
+  name?: string;
   legs: RouteLeg[];
 }
 
