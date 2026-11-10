@@ -150,7 +150,9 @@ function buildRoute(
   const trafficSegments: TrafficSegment[] = trafficSections.map((section) => {
     const magnitude = Number(section.magnitudeOfDelay);
     const congestion =
-      magnitude === 1 || magnitude === 2
+      magnitude === 1
+        ? 'light'
+        : magnitude === 2
         ? 'moderate'
         : magnitude === 3 || magnitude === 4
           ? 'heavy'
