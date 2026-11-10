@@ -28,6 +28,8 @@ export const storageKeys = {
   favorites: 'favorites',
   localReports: 'localReports',
   reportTimestamps: 'reportTimestamps',
+  deviceId: 'deviceId',
+  themePreference: 'themePreference',
 } as const;
 
 export function createTypedStorage(

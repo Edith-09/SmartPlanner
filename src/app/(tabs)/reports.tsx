@@ -4,17 +4,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReportForm } from '@/components/ReportForm';
 import { ReportListItem } from '@/components/ReportListItem';
-import { EmptyState, ErrorState } from '@/components/ui';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { theme } from '@/config/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useReports } from '@/hooks/useReports';
+import { ApiClientError } from '@/services/api/apiClient';
+import type { BoundingBox } from '@/types/domain';
 import { haversineDistanceMeters } from '@/utils/geo';
 
 export default function ReportsScreen() {
   const { colors } = useAppTheme();
   const location = useCurrentLocation();
-  const { reports, submitReport, confirmStillThere, markCleared } = useReports();
+  const bounds = useMemo<BoundingBox | null>(() => {
+    if (location.status !== 'ready' || !location.coordinate) {
+      return null;
+    }
+
+    return {
+      south: location.coordinate.latitude - 0.25,
+      north: location.coordinate.latitude + 0.25,
+      west: location.coordinate.longitude - 0.25,
+      east: location.coordinate.longitude + 0.25,
+    };
+  }, [location.coordinate, location.status]);
+  const {
+    reports,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    submitReport,
+    confirmStillThere,
+    markCleared,
+  } = useReports(bounds);
   const reportsWithDistance = useMemo(
     () => {
       const entries = reports.map((report) => ({
@@ -45,7 +68,7 @@ export default function ReportsScreen() {
         <View style={styles.header}>
           <Text style={[styles.eyebrow, { color: colors.primary }]}>Smart Transport Planner</Text>
           <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Reports</Text>
-          <Text style={[styles.caption, { color: colors.secondaryText }]}>Reports are stored on this device only.</Text>
+          <Text style={[styles.caption, { color: colors.secondaryText }]}>Reports are shared with everyone using the app.</Text>
         </View>
 
         {location.status === 'loading' && (
@@ -69,7 +92,23 @@ export default function ReportsScreen() {
             Active reports
           </Text>
         </View>
-        {reportsWithDistance.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.skeletonGroup}>
+            <Skeleton height={92} />
+            <Skeleton height={92} />
+          </View>
+        ) : isError ? (
+          <ErrorState
+            message={
+              error instanceof ApiClientError
+                ? error.message
+                : error instanceof Error
+                  ? error.message
+                  : 'Shared reports could not be loaded.'
+            }
+            onRetry={() => void refetch()}
+          />
+        ) : reportsWithDistance.length === 0 ? (
           <EmptyState
             title="No active reports"
             message="Reports you submit will appear here until they expire."
@@ -124,5 +163,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: theme.typography.heading,
     fontWeight: '700',
+  },
+  skeletonGroup: {
+    gap: theme.spacing.md,
   },
 });

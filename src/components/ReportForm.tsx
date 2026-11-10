@@ -13,7 +13,7 @@ interface ReportFormProps {
     type: IncidentType;
     note: string;
     location: Coordinate;
-  }) => { ok: boolean; reason?: 'rate-limit' };
+  }) => Promise<{ ok: boolean; reason?: 'rate-limit' }>;
 }
 
 const incidentTypes: IncidentType[] = ['crash', 'roadwork', 'hazard', 'closure', 'other'];
@@ -22,26 +22,38 @@ export function ReportForm({ location, onSubmit }: ReportFormProps) {
   const { colors } = useAppTheme();
   const [selectedType, setSelectedType] = useState<IncidentType | null>(null);
   const [note, setNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     message: string;
     tone: 'success' | 'error';
   } | null>(null);
 
-  const submit = (): void => {
-    if (!selectedType || !location) {
+  const submit = async (): Promise<void> => {
+    if (!selectedType || !location || isSubmitting) {
       return;
     }
-    const result = onSubmit({ type: selectedType, note, location });
-    if (!result.ok) {
+
+    setIsSubmitting(true);
+    try {
+      const result = await onSubmit({ type: selectedType, note, location });
+      if (!result.ok) {
+        setFeedback({
+          message: 'You can send up to 5 reports per hour. Please try again later.',
+          tone: 'error',
+        });
+        return;
+      }
+      setSelectedType(null);
+      setNote('');
+      setFeedback({ message: 'Report submitted. Thank you!', tone: 'success' });
+    } catch (error) {
       setFeedback({
-        message: 'You can send up to 5 reports per hour. Please try again later.',
+        message: error instanceof Error ? error.message : 'The report could not be submitted.',
         tone: 'error',
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-    setSelectedType(null);
-    setNote('');
-    setFeedback({ message: 'Report submitted. Thank you!', tone: 'success' });
   };
 
   return (
@@ -72,7 +84,8 @@ export function ReportForm({ location, onSubmit }: ReportFormProps) {
         <Button
           title="Submit report"
           onPress={submit}
-          disabled={!selectedType || !location}
+          disabled={!selectedType || !location || isSubmitting}
+          loading={isSubmitting}
           accessibilityLabel="Submit traffic report"
         />
         {feedback && (
